@@ -1,7 +1,7 @@
 [README.md](https://github.com/user-attachments/files/29673014/README.md)
 <div align="center">
 
-<img src="assets/logo.png" alt="Walkie LoRa" width="260">
+<img src="logo.png" alt="Walkie LoRa" width="260">
 
 # Walkie LoRa
 
