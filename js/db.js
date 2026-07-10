@@ -74,4 +74,30 @@ export async function setSetting(key, value) {
   await dbPut("settings", { key, value });
 }
 
+// record senza "id": lo store è autoIncrement, ritorna l'id generato.
+export async function addMessage(record) {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("messages", "readwrite");
+    const req = tx.objectStore("messages").add(record);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+// record deve includere "id" (es. per transizioni di stato sending->sent).
+export async function updateMessage(record) {
+  await dbPut("messages", record);
+}
+
+export async function getMessagesByGroup(groupId) {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("messages", "readonly");
+    const req = tx.objectStore("messages").index("byGroup").getAll(groupId);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
 export { dbGet, dbPut };

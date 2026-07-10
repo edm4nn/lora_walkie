@@ -1,7 +1,7 @@
 // Cache-first: dopo la prima visita online, l'app funziona interamente
 // offline (nessuna risorsa runtime da CDN: tutto è locale al repo).
 
-const CACHE_VERSION = "v1";
+const CACHE_VERSION = "v4";
 const CACHE_NAME = `meshsrp-${CACHE_VERSION}`;
 
 const PRECACHE_URLS = [
@@ -12,6 +12,9 @@ const PRECACHE_URLS = [
   "js/app.js",
   "js/ble.js",
   "js/db.js",
+  "js/crypto.js",
+  "js/packet.js",
+  "js/messaging.js",
   "js/tabs/chat.js",
   "js/tabs/maps.js",
   "js/tabs/sensors.js",

@@ -39,10 +39,24 @@ tabButtons.forEach((btn) => {
 function updateBleStatus(connected) {
   statusDot.classList.toggle("connected", connected);
   statusLabel.classList.toggle("connected", connected);
-  statusLabel.textContent = connected ? "Nodo connesso" : "Nodo non collegato";
+  if (!connected) statusLabel.textContent = "Nodo non collegato";
 }
 
-ble.addEventListener("connected", () => updateBleStatus(true));
+async function refreshStatusLabel() {
+  if (!ble.connected) return;
+  try {
+    const line = await ble.sendCommand("WHOAMI");
+    const m = /^ID (\d+) (.+)$/.exec(line);
+    if (m) statusLabel.textContent = `${m[1]} · ${m[2]}`;
+  } catch (err) {
+    // il dettaglio dell'errore è già visibile nel tab Impostazioni
+  }
+}
+
+ble.addEventListener("connected", () => {
+  updateBleStatus(true);
+  refreshStatusLabel();
+});
 ble.addEventListener("disconnected", () => updateBleStatus(false));
 updateBleStatus(ble.connected);
 

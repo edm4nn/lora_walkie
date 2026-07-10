@@ -27,7 +27,18 @@ class BleUart extends EventTarget {
     this.device = device;
     device.addEventListener("gattserverdisconnected", () => this._onDisconnected());
     await this._doConnect();
+    this._drainBuffer();  // potrebbero già esserci pacchetti in coda dal boot del nodo
     return device;
+  }
+
+  // GETBUF e inoltro di ogni pacchetto scaricato come evento "rxpkt".
+  async _drainBuffer() {
+    try {
+      const { packets } = await this.getBuf();
+      for (const hex of packets) this.dispatchEvent(new CustomEvent("rxpkt", { detail: hex }));
+    } catch (err) {
+      // silenzioso: si ritenta alla prossima connessione/riconnessione
+    }
   }
 
   // Riconnette a un device già autorizzato in questa sessione, senza un
@@ -159,6 +170,6 @@ document.addEventListener("visibilitychange", () => {
   if (!ble.device || ble.connected) return;
 
   ble.reconnect().then((ok) => {
-    if (ok) ble.getBuf().catch(() => {});
+    if (ok) ble._drainBuffer();
   });
 });
