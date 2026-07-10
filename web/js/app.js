@@ -39,8 +39,15 @@ tabButtons.forEach((btn) => {
 function updateBleStatus(connected) {
   statusDot.classList.toggle("connected", connected);
   statusLabel.classList.toggle("connected", connected);
-  statusLabel.textContent = connected ? "Nodo connesso" : "Nodo non collegato";
+  if (!connected) statusLabel.textContent = "Nodo non collegato";
 }
+
+// Niente WHOAMI attivo qui: il nodo manda già "ID ..." da solo appena
+// connesso (vedi ble.js), ci limitiamo ad ascoltarlo.
+ble.addEventListener("identity", (ev) => {
+  const { id, name } = ev.detail;
+  statusLabel.textContent = `${id} · ${name}`;
+});
 
 ble.addEventListener("connected", () => updateBleStatus(true));
 ble.addEventListener("disconnected", () => updateBleStatus(false));
