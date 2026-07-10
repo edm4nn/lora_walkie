@@ -1,263 +1,43 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="it">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<meta name="theme-color" content="#191c1f">
-<title>Walkie LoRa</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --bg:#191c1f; --panel:#22262a; --panel-2:#2a2f34; --line:#3a4046;
-    --amber:#f2a33c; --amber-dim:#7a5a2a; --olive:#8b9462;
-    --ink:#ede9dc; --muted:#9aa0a6; --danger:#e06c5a; --ok:#8fbf6f;
-    --mono:'IBM Plex Mono',monospace; --disp:'Chakra Petch',sans-serif;
-  }
-  *{box-sizing:border-box;margin:0;padding:0}
-  html,body{height:100%}
-  body{background:var(--bg); color:var(--ink); font-family:var(--mono); display:flex; justify-content:center}
-  #device{width:100%; max-width:480px; height:100dvh; display:flex; flex-direction:column; background:var(--bg)}
-
-  header{
-    background:var(--panel);
-    background-image:repeating-linear-gradient(90deg, transparent 0 10px, rgba(0,0,0,.18) 10px 12px);
-    border-bottom:1px solid var(--line); padding:12px 16px;
-  }
-  .row{display:flex; align-items:center; justify-content:space-between; gap:12px}
-  h1{font-family:var(--disp); font-size:16px; font-weight:600; letter-spacing:.14em; text-transform:uppercase}
-  h1 span{color:var(--amber)}
-  .freq{font-size:11px; color:var(--muted); letter-spacing:.06em; margin-top:2px}
-  .lamps{display:flex; gap:10px}
-  .lamp{display:flex; flex-direction:column; align-items:center; gap:3px}
-  .lamp i{width:10px;height:10px;border-radius:50%; background:#111417; border:1px solid var(--line); transition:.1s}
-  .lamp small{font-size:9px;color:var(--muted);letter-spacing:.12em}
-  .lamp.tx i.on{background:var(--amber); box-shadow:0 0 8px var(--amber)}
-  .lamp.rx i.on{background:var(--olive); box-shadow:0 0 8px var(--olive)}
-
-  .ctrl{display:flex; align-items:center; gap:8px; margin-top:11px}
-  #status{flex:1; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); display:flex; align-items:center; gap:8px}
-  #status::before{content:""; width:8px;height:8px;border-radius:50%; background:#50565c; flex:none}
-  #status.online{color:var(--ok)} #status.online::before{background:var(--ok)}
-  #status.busy{color:var(--amber)} #status.busy::before{background:var(--amber); animation:blink 1s infinite}
-  @keyframes blink{50%{opacity:.25}}
-
-  button{font-family:var(--disp); font-weight:600; letter-spacing:.08em; text-transform:uppercase;
-    border:1px solid var(--line); background:var(--panel-2); color:var(--ink);
-    padding:8px 12px; font-size:12px; border-radius:6px; cursor:pointer}
-  button:active{transform:translateY(1px)}
-  button.primary{background:var(--amber); border-color:var(--amber); color:#1b1405}
-  button:disabled{opacity:.4; cursor:default}
-
-  /* destinatario */
-  #toBar{display:flex; align-items:center; gap:8px; padding:8px 14px; background:var(--panel-2); border-bottom:1px solid var(--line)}
-  #toBar label{font-size:11px; color:var(--muted); letter-spacing:.08em; text-transform:uppercase}
-  select{flex:1; font-family:var(--mono); font-size:13px; background:#15181b; color:var(--ink);
-    border:1px solid var(--line); border-radius:6px; padding:7px 8px; outline:none}
-
-  #log{flex:1; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:9px; scroll-behavior:smooth}
-  .sys{align-self:center; font-size:11px; color:var(--muted); letter-spacing:.05em; padding:2px 10px; border:1px dashed var(--line); border-radius:99px; text-align:center}
-  .msg{max-width:82%; padding:8px 12px 6px; border-radius:10px; font-size:14px; line-height:1.45; word-wrap:break-word; border:1px solid var(--line); background:var(--panel)}
-  .msg .who{font-size:10px; color:var(--olive); letter-spacing:.05em; margin-bottom:3px; font-family:var(--disp); text-transform:uppercase}
-  .msg .meta{display:flex; gap:8px; justify-content:flex-end; align-items:center; margin-top:4px; font-size:10px; color:var(--muted)}
-  .msg.out{align-self:flex-end; border-color:var(--amber-dim); background:linear-gradient(180deg,rgba(242,163,60,.10),rgba(242,163,60,.04)),var(--panel); border-bottom-right-radius:3px}
-  .msg.in{align-self:flex-start; border-color:#4a5138; background:linear-gradient(180deg,rgba(139,148,98,.12),rgba(139,148,98,.04)),var(--panel); border-bottom-left-radius:3px}
-  .msg.bcast{border-style:dashed}
-  .tick{color:var(--muted)} .tick.ok{color:var(--ok)} .tick.fail{color:var(--danger)}
-
-  #bar{display:flex; gap:8px; padding:10px 12px calc(10px + env(safe-area-inset-bottom)); background:var(--panel); border-top:1px solid var(--line)}
-  #text{flex:1; background:#15181b; color:var(--ink); border:1px solid var(--line); border-radius:8px; padding:11px 12px; font-family:var(--mono); font-size:14px; outline:none; resize:none}
-  #text:focus{border-color:var(--amber-dim)}
-
-  #warn{background:#3a2320; color:#f0b8ad; font-size:12px; line-height:1.5; padding:10px 14px; border-bottom:1px solid #5c352f; display:none}
-
-  /* overlay setup identita' */
-  #setup{position:absolute; inset:0; background:rgba(15,17,19,.94); display:none; align-items:center; justify-content:center; padding:24px; z-index:5}
-  #setup .card{width:100%; max-width:360px; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:20px}
-  #setup h2{font-family:var(--disp); font-size:15px; letter-spacing:.1em; text-transform:uppercase; margin-bottom:6px}
-  #setup p{font-size:12px; color:var(--muted); line-height:1.5; margin-bottom:16px}
-  #setup .field{margin-bottom:14px}
-  #setup .field label{display:block; font-size:11px; color:var(--muted); letter-spacing:.08em; text-transform:uppercase; margin-bottom:6px}
-  #setup input{width:100%; background:#15181b; color:var(--ink); border:1px solid var(--line); border-radius:6px; padding:10px 12px; font-family:var(--mono); font-size:14px; outline:none}
-  #setup input:focus{border-color:var(--amber-dim)}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0f0d" />
+  <title>MeshSRP</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icons/icon.svg" />
+  <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-<div id="device">
-  <div id="warn">Questo browser non supporta Web Bluetooth. Usa Chrome su Android e apri la pagina da un indirizzo https.</div>
-  <header>
-    <div class="row">
-      <div>
-        <h1>Walkie <span>LoRa</span></h1>
-        <div class="freq" id="idline">canale privato &middot; 868 MHz &middot; AES</div>
+  <div id="app">
+    <header id="status-bar">
+      <div id="status-node">
+        <span id="status-ble-dot" class="ble-dot" aria-hidden="true"></span>
+        <span id="status-node-label">Nodo non collegato</span>
       </div>
-      <div class="lamps">
-        <div class="lamp tx"><i id="txLamp"></i><small>TX</small></div>
-        <div class="lamp rx"><i id="rxLamp"></i><small>RX</small></div>
-      </div>
-    </div>
-    <div class="ctrl">
-      <div id="status">scollegato</div>
-      <button id="cfgBtn" disabled>Identita'</button>
-      <button id="connBtn" class="primary">Collega</button>
-    </div>
-  </header>
+      <div id="status-test-banner" class="test-banner" hidden></div>
+    </header>
 
-  <div id="toBar">
-    <label>A:</label>
-    <select id="dest"><option value="255">Tutti (broadcast)</option></select>
-    <button id="pingBtn" disabled>Ping</button>
+    <main id="tab-content" aria-live="polite"></main>
+
+    <nav id="tab-bar">
+      <button type="button" class="tab-btn" data-tab="chat">
+        <span class="tab-btn-label">CHAT</span>
+      </button>
+      <button type="button" class="tab-btn" data-tab="maps">
+        <span class="tab-btn-label">MAPPE</span>
+      </button>
+      <button type="button" class="tab-btn" data-tab="sensors">
+        <span class="tab-btn-label">SENSORI</span>
+      </button>
+      <button type="button" class="tab-btn" data-tab="settings">
+        <span class="tab-btn-label">IMPOSTAZIONI</span>
+      </button>
+    </nav>
   </div>
 
-  <div id="log"></div>
-
-  <div id="bar">
-    <textarea id="text" rows="1" placeholder="Messaggio..." disabled></textarea>
-    <button id="sendBtn" class="primary" disabled>Invia</button>
-  </div>
-
-  <div id="setup">
-    <div class="card">
-      <h2>Identita' apparato</h2>
-      <p>Assegna un indirizzo unico (1-254) e un nome a questo apparato. Restano salvati nel dispositivo. Ogni apparato della rete deve avere un indirizzo diverso.</p>
-      <div class="field">
-        <label>Indirizzo (1-254)</label>
-        <input id="setAddr" type="number" min="1" max="254" inputmode="numeric" placeholder="es. 1">
-      </div>
-      <div class="field">
-        <label>Nome</label>
-        <input id="setName" type="text" maxlength="16" placeholder="es. Base">
-      </div>
-      <div style="display:flex; gap:8px; justify-content:flex-end">
-        <button id="cfgCancel">Annulla</button>
-        <button id="cfgSave" class="primary">Salva</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<script>
-const SVC='6e400001-b5a3-f393-e0a9-e50e24dcca9e';
-const RX ='6e400002-b5a3-f393-e0a9-e50e24dcca9e';
-const TX ='6e400003-b5a3-f393-e0a9-e50e24dcca9e';
-const $=id=>document.getElementById(id);
-const log=$('log'), status=$('status'), destSel=$('dest');
-let device=null, rxChar=null, lineBuf='';
-let myAddr=0, myName='';
-const peers=new Map();               // addr -> name
-const awaitingSent=[];               // bolle in attesa del ctr
-const byCtr=new Map();               // ctr -> tick element
-
-if(!navigator.bluetooth) $('warn').style.display='block';
-
-function blink(id){ const l=$(id); l.classList.add('on'); setTimeout(()=>l.classList.remove('on'),250); }
-function scroll(){ log.scrollTop=log.scrollHeight; }
-function now(){ return new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}); }
-function peerLabel(a){ if(a==255) return 'Tutti'; const n=peers.get(String(a)); return n? n+' (#'+a+')' : 'Nodo '+a; }
-
-function addSys(t){ const d=document.createElement('div'); d.className='sys'; d.textContent=t; log.appendChild(d); scroll(); }
-function addMsg(txt,dir,opts={}){
-  const m=document.createElement('div'); m.className='msg '+dir+(opts.bcast?' bcast':'');
-  if(opts.who){ const w=document.createElement('div'); w.className='who'; w.textContent=opts.who; m.appendChild(w); }
-  const b=document.createElement('div'); b.textContent=txt; m.appendChild(b);
-  const meta=document.createElement('div'); meta.className='meta';
-  let tail=now(); if(dir==='out') tail+=opts.bcast?' inviato':' <span class="tick">&#10003;</span>';
-  meta.innerHTML=tail; m.appendChild(meta); log.appendChild(m); scroll();
-  return m.querySelector('.tick');
-}
-
-function rebuildDest(){
-  const cur=destSel.value;
-  destSel.innerHTML='<option value="255">Tutti (broadcast)</option>';
-  [...peers.keys()].sort((a,b)=>a-b).forEach(a=>{
-    const o=document.createElement('option'); o.value=a; o.textContent=peerLabel(a); destSel.appendChild(o);
-  });
-  if([...destSel.options].some(o=>o.value===cur)) destSel.value=cur;
-}
-
-/* ---------- BLE ---------- */
-async function connect(){
-  try{
-    status.textContent='ricerca...'; status.className='busy';
-    device=await navigator.bluetooth.requestDevice({filters:[{services:[SVC]}]});
-    device.addEventListener('gattserverdisconnected',onDisconnect);
-    status.textContent='connessione...'; status.className='busy';
-    const g=await device.gatt.connect();
-    const s=await g.getPrimaryService(SVC);
-    rxChar=await s.getCharacteristic(RX);
-    const tx=await s.getCharacteristic(TX);
-    await tx.startNotifications();
-    tx.addEventListener('characteristicvaluechanged',onNotify);
-    status.innerHTML='in linea &middot; '+device.name; status.className='online';
-    setUI(true); addSys('collegato a '+device.name);
-    writeLine('WHOAMI');
-  }catch(e){ status.textContent='scollegato'; status.className=''; if(e.name!=='NotFoundError') addSys('errore: '+e.message); }
-}
-function onDisconnect(){ status.textContent='scollegato'; status.className=''; setUI(false); rxChar=null; addSys('collegamento perso'); }
-function setUI(on){
-  $('text').disabled=!on; $('sendBtn').disabled=!on; $('pingBtn').disabled=!on; $('cfgBtn').disabled=!on;
-  $('connBtn').textContent=on?'Stacca':'Collega';
-}
-const enc=new TextEncoder(), dec=new TextDecoder();
-async function writeLine(s){ if(!rxChar) return; const b=enc.encode(s+'\n'); for(let i=0;i<b.length;i+=20) await rxChar.writeValueWithoutResponse(b.slice(i,i+20)); }
-function onNotify(ev){ lineBuf+=dec.decode(ev.target.value); let i; while((i=lineBuf.indexOf('\n'))>=0){ handleLine(lineBuf.slice(0,i).trim()); lineBuf=lineBuf.slice(i+1); } }
-
-/* ---------- protocollo ---------- */
-function handleLine(line){
-  if(!line) return;
-  const sp=line.indexOf(' '); const cmd=sp<0?line:line.slice(0,sp); const rest=sp<0?'':line.slice(sp+1);
-  if(cmd==='RX'||cmd==='RXB'){
-    blink('rxLamp');
-    const s2=rest.indexOf(' '); const src=rest.slice(0,s2); const txt=rest.slice(s2+1);
-    addMsg(txt,'in',{who:peerLabel(src)+(cmd==='RXB'?' - a tutti':''), bcast:cmd==='RXB'});
-    if(navigator.vibrate) navigator.vibrate(60);
-  }
-  else if(cmd==='SENT'){ const t=awaitingSent.shift(); if(t) byCtr.set(rest,t); }
-  else if(cmd==='BSENT'){ awaitingSent.shift(); }   // broadcast: nessun ACK
-  else if(cmd==='ACK'){ const t=byCtr.get(rest); if(t){ t.innerHTML='&#10003;&#10003;'; t.className='tick ok'; byCtr.delete(rest); } }
-  else if(cmd==='FAIL'){ const t=byCtr.get(rest); if(t){ t.textContent='non consegnato'; t.className='tick fail'; byCtr.delete(rest); } }
-  else if(cmd==='ID'){
-    const s2=rest.indexOf(' '); myAddr=parseInt(rest.slice(0,s2<0?rest.length:s2)); myName=s2<0?'':rest.slice(s2+1);
-    $('idline').innerHTML = myAddr? (myName||'senza nome')+' &middot; nodo '+myAddr+' &middot; 868 MHz' : 'apparato non configurato - premi Identita\'';
-    if(!myAddr) openSetup(true);
-  }
-  else if(cmd==='PEER'){
-    const s2=rest.indexOf(' '); const a=rest.slice(0,s2<0?rest.length:s2); const n=s2<0?'':rest.slice(s2+1);
-    if(parseInt(a)!==myAddr){ const known=peers.get(a); peers.set(a,n); if(!known) addSys('nodo visto: '+(n||'#'+a)); rebuildDest(); }
-  }
-  else if(cmd==='PONG') addSys('pong dal nodo '+rest+' - link radio ok');
-  else if(cmd==='INFO') addSys(rest);
-}
-
-/* ---------- setup identita' ---------- */
-function openSetup(force){
-  $('setAddr').value = myAddr||''; $('setName').value=myName||'';
-  $('setup').style.display='flex'; $('cfgCancel').style.display=force?'none':'inline-block';
-}
-$('cfgBtn').onclick=()=>openSetup(false);
-$('cfgCancel').onclick=()=>$('setup').style.display='none';
-$('cfgSave').onclick=async()=>{
-  const a=parseInt($('setAddr').value), n=$('setName').value.trim();
-  if(!(a>=1&&a<=254)){ addSys('indirizzo non valido (1-254)'); return; }
-  await writeLine('SETID '+a+' '+n);
-  $('setup').style.display='none';
-};
-
-/* ---------- eventi ---------- */
-$('connBtn').onclick=()=>{ if(device&&device.gatt.connected) device.gatt.disconnect(); else connect(); };
-$('pingBtn').onclick=()=>{ blink('txLamp'); writeLine('PING '+destSel.value); };
-$('sendBtn').onclick=send;
-$('text').addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); send(); } });
-async function send(){
-  const t=$('text').value.trim(); if(!t) return;
-  if(!myAddr){ openSetup(true); return; }
-  $('text').value=''; blink('txLamp');
-  const dst=destSel.value; const bcast=dst==='255';
-  awaitingSent.push(addMsg(t,'out',{who:'a '+peerLabel(dst), bcast}));
-  await writeLine('MSG '+dst+' '+t);
-}
-addSys('premi Collega per iniziare');
-</script>
+  <script type="module" src="js/app.js"></script>
 </body>
 </html>
-
